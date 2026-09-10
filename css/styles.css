@@ -15,9 +15,9 @@
 :root, :root[data-theme="dark"] {
   color-scheme: dark;
   --bg:            #0B0F1A;
-  --bg-grad-a:     rgba(139, 92, 246, 0.10);
-  --bg-grad-b:     rgba(59, 130, 246, 0.08);
-  --bg-grad-c:     rgba(236, 72, 153, 0.06);
+  --bg-grad-a:     rgba(139, 92, 246, 0.045);
+  --bg-grad-b:     rgba(59, 130, 246, 0.035);
+  --bg-grad-c:     rgba(236, 72, 153, 0.022);
   --surface:       #111827;
   --surface-2:     #161F33;
   --surface-3:     #1C2740;
@@ -50,13 +50,18 @@
   --ok-soft:     rgba(12,163,12,.14);
   --warn-soft:   rgba(250,178,25,.14);
   --danger-soft: rgba(208,59,59,.14);
+
+  /* Botão sólido — tinta neutra, sem cor de marca */
+  --btn-solid-bg:    #E8EDF5;
+  --btn-solid-fg:    #0B0F1A;
+  --btn-solid-hover: #FFFFFF;
 }
 :root[data-theme="light"] {
   color-scheme: light;
   --bg:            #F4F5F9;
-  --bg-grad-a:     rgba(139, 92, 246, 0.09);
-  --bg-grad-b:     rgba(59, 130, 246, 0.07);
-  --bg-grad-c:     rgba(236, 72, 153, 0.05);
+  --bg-grad-a:     rgba(139, 92, 246, 0.04);
+  --bg-grad-b:     rgba(59, 130, 246, 0.03);
+  --bg-grad-c:     rgba(236, 72, 153, 0.02);
   --surface:       #FFFFFF;
   --surface-2:     #F8FAFC;
   --surface-3:     #EEF2F7;
@@ -79,6 +84,10 @@
   --s4: #1baf7a;
   --s5: #2a78d6;
   --s6: #e34948;
+
+  --btn-solid-bg:    #16202F;
+  --btn-solid-fg:    #FFFFFF;
+  --btn-solid-hover: #0B1220;
 }
 
 * { -webkit-tap-highlight-color: transparent; }
@@ -92,7 +101,7 @@ body {
   min-height: 100vh;
   transition: background-color .25s ease, color .25s ease;
 }
-/* Brilho ambiente muito sutil no topo — dá o ar de dashboard executivo */
+/* Brilho ambiente quase imperceptível — dá profundidade sem virar decoração */
 body::before {
   content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
   background:
@@ -147,6 +156,7 @@ select.field { appearance: none; padding-right: 30px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 10px center; }
 .field::placeholder { color: var(--text-3); }
+.field:disabled { opacity: .45; cursor: not-allowed; }
 label.fl { display: block; font-size: 11.5px; font-weight: 600; color: var(--text-2); margin-bottom: 5px; }
 
 /* ------------------------------------------------------------------
@@ -229,18 +239,15 @@ label.fl { display: block; font-size: 11.5px; font-weight: 600; color: var(--tex
 }
 .btn:hover { background: var(--surface-3); border-color: var(--border-strong); }
 .btn:active { transform: translateY(1px); }
+/* Botão principal: sólido, sem gradiente e sem brilho.
+   Num painel de dados a cor deve significar dado — cromo colorido só disputa
+   atenção com os gráficos. Por isso o único botão preenchido usa tinta neutra. */
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-  border-color: transparent; color: #fff;
-  box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--accent-1) 70%, transparent);
+  background: var(--btn-solid-bg);
+  border-color: transparent;
+  color: var(--btn-solid-fg);
 }
-.btn-primary:hover { filter: brightness(1.08); border-color: transparent; }
-.btn-pink {
-  background: linear-gradient(135deg, var(--accent-3), var(--accent-1));
-  border-color: transparent; color: #fff;
-  box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--accent-3) 70%, transparent);
-}
-.btn-pink:hover { filter: brightness(1.08); }
+.btn-primary:hover { background: var(--btn-solid-hover); border-color: transparent; }
 .btn-ghost { background: transparent; }
 .btn-ghost:hover { background: var(--surface-2); }
 .btn-icon { padding: 8px; }
@@ -289,13 +296,55 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .chk { display: flex; align-items: flex-start; gap: 9px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; background: var(--surface-2); transition: border-color .15s, background .15s; }
 .chk:hover { border-color: var(--border-strong); }
 .chk input { margin-top: 2px; width: 15px; height: 15px; accent-color: var(--accent-1); flex: none; }
-.chk-t { font-size: 12.5px; font-weight: 560; }
-.chk-d { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+.chk-t { display: block; font-size: 12.5px; font-weight: 560; }
+.chk-d { display: block; font-size: 11px; color: var(--text-3); margin-top: 2px; line-height: 1.45; }
 
 /* Toast */
 #toasts { position: fixed; bottom: 20px; right: 20px; z-index: 90; display: flex; flex-direction: column; gap: 8px; max-width: 340px; }
 .toast { background: var(--surface-3); border: 1px solid var(--border-strong); border-radius: 12px; padding: 11px 14px; font-size: 12.5px; box-shadow: 0 14px 34px -14px rgba(0,0,0,.7); animation: slide .2s ease-out; display: flex; gap: 9px; align-items: flex-start; }
 @keyframes slide { from { opacity: 0; transform: translateX(14px); } }
+
+/* Cartões de insight */
+.insight {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--tom, var(--accent-2));
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.insight-top { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.insight-icon {
+  width: 22px; height: 22px; border-radius: 7px; flex: none;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--tom, var(--accent-2)) 16%, transparent);
+  color: var(--tom, var(--accent-2));
+}
+.insight-title { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+.insight-value { font-size: 19px; font-weight: 650; letter-spacing: -.015em; line-height: 1.2; }
+.insight-note { font-size: 11.5px; color: var(--text-2); margin-top: 4px; line-height: 1.45; }
+
+/* Linha de benefício no formulário de salário */
+.benefit-row {
+  display: grid; gap: 8px; align-items: end;
+  grid-template-columns: minmax(0,1.6fr) minmax(0,.9fr) minmax(0,1fr) auto;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 11px;
+}
+@media (max-width: 640px) { .benefit-row { grid-template-columns: 1fr 1fr; } .benefit-row .benefit-name { grid-column: 1 / -1; } }
+
+/* Cartão de um período de salário */
+.sal-card {
+  border: 1px solid var(--border); border-radius: 14px;
+  padding: 14px 16px; background: var(--surface-2);
+}
+.sal-card + .sal-card { margin-top: 10px; }
+.sal-card.atual { border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 8px; font-size: 11.5px;
+  background: var(--surface-3); color: var(--text-2);
+}
+.chip b { color: var(--text-1); font-weight: 600; }
 
 /* Empty state */
 .empty { display: grid; place-items: center; text-align: center; padding: 26px 16px; color: var(--text-3); gap: 8px; }

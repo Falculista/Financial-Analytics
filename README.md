@@ -3,6 +3,8 @@
 Dashboard web de controle financeiro pessoal — salário, vale transporte, horas extras,
 liberamentos, despesas por categoria e contas a receber do patrão.
 
+**[▶ Abrir o painel](https://falculista.github.io/Financial-Analytics/)**
+
 Roda **abrindo o `index.html` no navegador**. Sem build, sem servidor, sem instalação.
 Os dados ficam salvos no `localStorage` do próprio navegador — nada sai do dispositivo.
 
@@ -11,7 +13,7 @@ Os dados ficam salvos no `localStorage` do próprio navegador — nada sai do di
 ## Estrutura
 
 ```
-financial-analytics/
+.
 ├── index.html          Marcação da página (só HTML — nada de CSS ou JS embutido)
 ├── css/
 │   └── styles.css      Tokens de design (cores, sombras) e componentes de interface
@@ -24,6 +26,9 @@ financial-analytics/
     └── pdf.js          Relatório executivo em PDF (jsPDF)
 ```
 
+O `index.html` fica na **raiz do repositório** — é assim que o GitHub Pages encontra a
+página.
+
 A ordem das tags `<script>` no fim do `index.html` importa: cada arquivo usa o anterior.
 São scripts clássicos (não módulos ES) justamente para funcionar via `file://`, sem servidor.
 
@@ -32,7 +37,7 @@ São scripts clássicos (não módulos ES) justamente para funcionar via `file:/
 | Camada | Arquivo | Responsabilidade |
 |---|---|---|
 | 1. Storage Adapter | `core.js` | Conversa com a fonte de dados. Hoje `localStorage`; amanhã uma API. |
-| 2. Repository | `core.js` | `id`, `userId`, timestamps e normalização dos registros. |
+| 2. Repository | `core.js` | `id`, `userId`, timestamps e normalização de lançamentos e períodos de salário. |
 | 3. Calc | `core.js` | Motor financeiro — funções puras, sem efeito colateral. |
 | 4. UI | `dom/charts/ui/forms` | Desenha e reage. Não sabe de onde vieram os dados. |
 | 5. Relatório | `pdf.js` | Monta o PDF a partir das mesmas funções de cálculo. |
@@ -54,38 +59,56 @@ Nenhuma camada acima da primeira acessa `localStorage` diretamente. Isso é inte
 
 ## Como usar
 
-1. **Configurações** — informe salário mensal, valor do VT por semana, valor da hora
-   extra e o dia de pagamento. Esses valores alimentam todos os cálculos.
-2. **Novo Lançamento** — despesa, hora extra, liberamento, ajuste de VT, receita
-   extra ou pendência do patrão.
-3. **Gerar Relatório PDF** — escolha o período, marque as seções, escreva uma
-   observação e baixe.
-4. **Exportar Dados → JSON** — backup completo e restaurável. Faça de vez em quando:
-   se o navegador limpar os dados do site, é o que traz tudo de volta.
+1. **Salário e Benefícios** — cadastre um período: valor, a data em que passou a
+   receber (`A partir de`), `Até o momento` ou uma data final, e os benefícios.
+   Meses anteriores à data de início ficam **sem salário** — o painel não inventa
+   receita que você não teve.
+2. **Barra de ações** — os botões ficam à vista, cada um escrito: `Despesa`,
+   `Hora extra`, `Liberamento`, `Receita extra`, `A receber do patrão`.
+3. **Filtro Período** — alterne entre um mês e **O ano todo**. KPIs, gráficos,
+   análises e tabela seguem a escolha.
+4. **Relatório PDF** — escolha o período, marque as seções, escreva uma observação
+   e baixe.
+5. **Dados → Exportar JSON** — backup completo e restaurável.
 
 O painel também traz um "Como usar" recolhível no rodapé, com o passo a passo completo.
 
+### Reajuste de salário
+
+Não edite o valor antigo. Coloque uma **data final** no período que acabou e crie um
+**novo período**. O histórico continua calculado com os valores da época — é para isso
+que o salário é um período, e não um número solto.
+
 ### Dados de exemplo
 
-O painel começa vazio. Em **Configurações** há dois botões:
-`Carregar dados de exemplo` (popula 12 meses fictícios para ver o layout cheio) e
-`Apagar todos os dados` (volta ao zero).
+O painel começa vazio. No menu **Dados** há `Carregar dados de exemplo` (12 meses
+fictícios, com um reajuste no meio) e `Apagar todos os dados`.
 
 ---
 
 ## Regras de cálculo
 
 ```
-Receita   = salário + VT + horas extras + receitas extras − liberamentos
-VT        = semanas do mês × valor semanal
-Hora extra= horas × valor da hora
-Saldo     = receita − despesas
-Atrasado  = data prevista < hoje  E  status ≠ pago
+Receita    = salário + benefícios + horas extras + receitas extras − liberamentos
+Salário    = valor do período × (dias cobertos no mês ÷ dias do mês)
+Hora extra = horas × valor da hora gravado naquele lançamento
+Saldo      = receita − despesas
+Atrasado   = data prevista < hoje  E  status ≠ pago
 ```
 
-**Semanas do mês** são contadas pelo número de segundas-feiras — dá 4 ou 5, conforme o
-calendário. Dá para sobrescrever manualmente por mês nas Configurações, junto com o
-salário daquele mês específico.
+**Mês parcial**: começou dia 15 num mês de 30 dias? O salário entra pela metade. O
+detalhamento do PDF mostra a cobertura (`16/30 dias`) para você conferir.
+
+**Benefícios** têm frequência:
+
+| Frequência | Como vira dinheiro no mês |
+|---|---|
+| Por semana | valor × número de segundas-feiras dentro do período (4 ou 5) |
+| Por dia útil | valor × dias de segunda a sexta dentro do período |
+| Por mês | valor cheio, proporcional aos dias se o período for parcial |
+
+**Valor da hora extra** vive no próprio lançamento (pré-preenchido com o último usado),
+não numa configuração global: reajuste futuro não reescreve o histórico.
 
 A marcação de "atrasado" é **derivada, nunca gravada** — assim nunca fica desatualizada.
 
@@ -97,8 +120,8 @@ A migração já está preparada. Em `js/core.js` existe o esqueleto comentado d
 `ApiAdapter`, com os mesmos cinco métodos do `LocalStorageAdapter`:
 
 ```js
-listTransactions()   getSettings()
-saveTransactions()   saveSettings()
+listTransactions()   listSalaries()   getSettings()
+saveTransactions()   saveSalaries()   saveSettings()
 clear()
 ```
 

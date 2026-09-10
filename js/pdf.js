@@ -77,18 +77,11 @@ function monthsBetween(from, to) {
 }
 
 function buildReport(from, to) {
-  const txs = Repo.all(), st = Repo.settings();
+  const txs = Repo.all(), sal = Repo.salaries();
   const keys = monthsBetween(from, to);
-  const months = keys.map(k => Calc.monthSummary(k, txs, st));
-
-  // Totais do período = soma dos meses de competência
-  const tot = months.reduce((a, m) => ({
-    salario: round2(a.salario + m.salario), vt: round2(a.vt + m.vt), extra: round2(a.extra + m.extra),
-    outras: round2(a.outras + m.outras), descontos: round2(a.descontos + m.descontos),
-    receita: round2(a.receita + m.receita), despesa: round2(a.despesa + m.despesa),
-    saldo: round2(a.saldo + m.saldo), horasExtras: round2(a.horasExtras + m.horasExtras),
-    horasLiberadas: round2(a.horasLiberadas + m.horasLiberadas), semanasVt: a.semanasVt + m.semanasVt,
-  }), { salario: 0, vt: 0, extra: 0, outras: 0, descontos: 0, receita: 0, despesa: 0, saldo: 0, horasExtras: 0, horasLiberadas: 0, semanasVt: 0 });
+  const R = Calc.rangeSummary(keys, txs, sal);
+  const months = R.months;
+  const tot = R;
 
   // Lançamentos no intervalo exato de datas
   const inRange = t => { const d = (t.kind === 'a_receber' ? (t.dataPrevista || t.data) : t.data); return d >= from && d <= to; };
@@ -104,7 +97,9 @@ function buildReport(from, to) {
     byCat.set(c, round2(byCat.get(c) + num(t.valor)));
   });
 
-  return { from, to, keys, months, tot, lancamentos, receivables, recvTot, byCat, settings: st };
+  const insights = Calc.insights(keys, txs, sal);
+  return { from, to, keys, months, tot, lancamentos, receivables, recvTot, byCat,
+           salaries: sal, insights };
 }
 
 /* ---- 20.3 Gráficos em imagem ---------------------------------------------------- */
@@ -197,8 +192,12 @@ async function reportCharts(R) {
   }
 
   // 3. Receita por categoria (barras horizontais)
-  const rev = [['Salário', R.tot.salario], ['Vale Transporte', R.tot.vt], ['Hora Extra', R.tot.extra]]
-    .concat(R.tot.outras > 0 ? [['Outras receitas', R.tot.outras]] : []);
+  const rev = [['Salário', R.tot.salario]]
+    .concat((R.tot.beneficios || []).map(b => [b.nome, b.valor]))
+    .concat(R.tot.extra > 0 ? [['Hora Extra', R.tot.extra]] : [])
+    .concat(R.tot.outras > 0 ? [['Outras receitas', R.tot.outras]] : [])
+    .filter(r => r[1] > 0);
+  if (!rev.length) rev.push(['Sem receita', 0]);
   out.revenue = await chartImage({
     type: 'bar',
     data: { labels: rev.map(r => r[0]), datasets: [{ data: rev.map(r => r[1]), backgroundColor: PDF.c.s1, borderRadius: 4, barPercentage: .6 }] },
@@ -267,8 +266,15 @@ function newPage(C) { C.doc.addPage(); pageChrome(C); }
 /** Garante espaço vertical; se não houver, abre página nova. */
 function ensure(C, h) { if (C.y + h > PDF.H - 20) { newPage(C); return true; } return false; }
 
-function sectionTitle(C, title, sub) {
-  ensure(C, 16);
+/** Altura aproximada do começo de uma tabela — usada para o título não ficar órfão. */
+function tblReserve(nLinhas, nRodape = 0) {
+  return 8 + 7.2 * Math.min(nLinhas, 3) + nRodape * 8.2 + 2;
+}
+
+function sectionTitle(C, title, sub, reserve = 0) {
+  // `reserve` é a altura do primeiro bloco da seção: sem isso o título cabia no pé
+  // da página e o conteúdo pulava para a seguinte, deixando um buraco.
+  ensure(C, 16 + reserve);
   const { doc } = C;
   fill(doc, PDF.c.a1); doc.roundedRect(PDF.M, C.y - 3.4, 1.5, 7.5, .75, .75, 'F');
   font(doc, 12, 'bold'); ink(doc, PDF.c.t1);
@@ -311,7 +317,13 @@ function table(C, cols, rows, footCells) {
     C.y += headH;
   };
 
-  ensure(C, headH + rowH * 3);
+  // Aceita uma linha ([celulas]) ou várias ([[celulas], [celulas]]).
+  const footRows = !footCells ? []
+    : (Array.isArray(footCells[0]) || (footCells[0] === null && Array.isArray(footCells[1]))
+        ? footCells : [footCells]);
+  // Reserva cabeçalho + algumas linhas + o rodapé inteiro: assim o total nunca fica
+  // órfão no topo da página seguinte.
+  ensure(C, headH + rowH * Math.min(rows.length, 3) + footRows.length * (rowH + 1));
   drawHead();
 
   rows.forEach((r, i) => {
@@ -337,26 +349,32 @@ function table(C, cols, rows, footCells) {
     C.y += rowH;
   });
 
-  if (footCells) {
-    if (C.y + rowH + 2 > PDF.H - 20) { newPage(C); drawHead(); }
-    fill(doc, PDF.c.card2); doc.rect(x0, C.y, PDF.CW, rowH + 1, 'F');
-    let x = x0;
-    cols.forEach((c, i) => {
-      const v = footCells[i];
-      if (v) {
-        font(doc, 8, 'bold'); ink(doc, v.color || PDF.c.t1);
-        let txt = sane(v.text);
-        const maxW = c.w - 5;                      // o rodapé respeita a coluna como as linhas
-        if (doc.getTextWidth(txt) > maxW) {
-          while (txt.length > 1 && doc.getTextWidth(txt + '...') > maxW) txt = txt.slice(0, -1);
-          txt += '...';
+  if (footRows.length) {
+    if (C.y + footRows.length * (rowH + 1) + 2 > PDF.H - 20) { newPage(C); drawHead(); }
+    footRows.forEach((linha, li) => {
+      fill(doc, PDF.c.card2); doc.rect(x0, C.y, PDF.CW, rowH + 1, 'F');
+      let x = x0;
+      cols.forEach((c, i) => {
+        const v = linha[i];
+        if (v) {
+          font(doc, 8, 'bold'); ink(doc, v.color || PDF.c.t1);
+          let txt = sane(v.text);
+          const maxW = c.w - 5;                    // o rodapé respeita a coluna como as linhas
+          if (doc.getTextWidth(txt) > maxW) {
+            while (txt.length > 1 && doc.getTextWidth(txt + '...') > maxW) txt = txt.slice(0, -1);
+            txt += '...';
+          }
+          doc.text(txt, c.align === 'right' ? x + c.w - 2.5 : x + 2.5, C.y + 5.4,
+            { align: c.align === 'right' ? 'right' : 'left' });
         }
-        doc.text(txt, c.align === 'right' ? x + c.w - 2.5 : x + 2.5, C.y + 5.4,
-          { align: c.align === 'right' ? 'right' : 'left' });
+        x += c.w;
+      });
+      C.y += rowH + 1;
+      if (li < footRows.length - 1) {
+        stroke(doc, PDF.c.border); doc.setLineWidth(.12);
+        doc.line(x0, C.y, x0 + PDF.CW, C.y);
       }
-      x += c.w;
     });
-    C.y += rowH + 1;
   }
   C.y += 6;
 }
@@ -444,19 +462,48 @@ function drawKpis(C) {
   const gap = 3.6, w = (PDF.CW - gap * 2) / 3;
   ensure(C, 62);
   const y = C.y;
-  kpiCard(C, PDF.M, y, w, 28, { label: 'Receita total', value: pMoney(R.tot.receita), note: 'Salário + VT + extras - descontos', color: PDF.c.s1 });
+  kpiCard(C, PDF.M, y, w, 28, { label: 'Receita total', value: pMoney(R.tot.receita), note: 'Salário + benefícios + extras - descontos', color: PDF.c.s1 });
   kpiCard(C, PDF.M + w + gap, y, w, 28, { label: 'Despesas totais', value: pMoney(R.tot.despesa), note: 'Somatório dos lançamentos', color: PDF.c.s2 });
   kpiCard(C, PDF.M + (w + gap) * 2, y, w, 28, { label: 'Saldo líquido', value: pMoney(R.tot.saldo), note: R.tot.saldo < 0 ? 'Déficit' : 'Superávit', color: R.tot.saldo < 0 ? PDF.c.danger : PDF.c.ok });
   const y2 = y + 32;
   kpiCard(C, PDF.M, y2, w, 28, { label: 'A receber do patrão', value: pMoney(R.recvTot.aReceber), note: `${R.recvTot.countAtrasado} em atraso, ${R.recvTot.countPendente} no prazo`, color: PDF.c.warn });
-  kpiCard(C, PDF.M + w + gap, y2, w, 28, { label: 'Horas extras', value: sane(hours(R.tot.horasExtras)), note: `${pMoney(R.tot.extra)} a ${pMoney(R.settings.valorHoraExtra)}/hora`, color: PDF.c.s3 });
-  kpiCard(C, PDF.M + (w + gap) * 2, y2, w, 28, { label: 'Vale transporte', value: pMoney(R.tot.vt), note: `${R.tot.semanasVt} semana(s) x ${pMoney(R.settings.vtSemanal)}`, color: PDF.c.s4 });
+  kpiCard(C, PDF.M + w + gap, y2, w, 28, { label: 'Horas extras', value: sane(hours(R.tot.horasExtras)), note: `${pMoney(R.tot.extra)} no período`, color: PDF.c.s3 });
+  kpiCard(C, PDF.M + (w + gap) * 2, y2, w, 28, { label: 'Benefícios', value: pMoney(R.tot.totalBeneficios), note: (R.tot.beneficios || []).length ? R.tot.beneficios.map(b => b.nome).join(', ') : 'Nenhum cadastrado', color: PDF.c.s4 });
   C.y = y2 + 36;
+}
+
+/** Análises automáticas — as mesmas que aparecem no painel. */
+function drawInsights(C) {
+  const list = (C.R.insights || []).slice(0, 6);
+  if (!list.length) return;
+  const { doc } = C;
+  sectionTitle(C, 'Análises e Insights', 'Leituras automáticas do período', 28);
+  const gap = 3.6, w = (PDF.CW - gap * 2) / 3;
+  const tom = { bom: PDF.c.ok, ruim: PDF.c.danger, atencao: PDF.c.warn, neutro: PDF.c.a2 };
+  list.forEach((i, idx) => {
+    const col = idx % 3, lin = Math.floor(idx / 3);
+    if (col === 0 && lin > 0) C.y += 26;
+    if (col === 0) ensure(C, 26);
+    const x = PDF.M + col * (w + gap), y = C.y;
+    fill(doc, PDF.c.card); stroke(doc, PDF.c.border); doc.setLineWidth(.25);
+    doc.roundedRect(x, y, w, 23, 2.6, 2.6, 'FD');
+    fill(doc, tom[i.tom] || tom.neutro); doc.roundedRect(x, y + 3, 1.2, 17, .6, .6, 'F');
+    font(doc, 6.5, 'bold'); ink(doc, PDF.c.t3);
+    doc.text(sane(i.titulo.toUpperCase()), x + 5, y + 6.5);
+    font(doc, 11, 'bold'); ink(doc, PDF.c.t1);
+    let v = sane(i.valor);
+    while (doc.getTextWidth(v) > w - 8 && v.length > 3) v = v.slice(0, -1);
+    doc.text(v, x + 5, y + 13.5);
+    font(doc, 6.8, 'normal'); ink(doc, PDF.c.t2);
+    const linhas = doc.splitTextToSize(sane(i.nota), w - 9).slice(0, 2);
+    doc.text(linhas, x + 5, y + 18);
+  });
+  C.y += 30;
 }
 
 function drawCharts(C, imgs) {
   const { doc } = C;
-  sectionTitle(C, 'Análise Gráfica', 'Evolução, composição de receitas e despesas');
+  sectionTitle(C, 'Análise Gráfica', 'Evolução, composição de receitas e despesas', 96);
 
   // Evolução — largura total
   const h1 = 74;
@@ -480,11 +527,10 @@ function drawCharts(C, imgs) {
   const gap = 4, cw = (PDF.CW - gap) / 2, ch = 56;
   const catLegend = (imgs.expenseCats || []).map(([c, v]) =>
     [c, PDF.c['s' + (EXPENSE_SLOT[EXPENSE_CATS.indexOf(c)] + 1)] || PDF.c.s6, pMoney(v)]);
-  const revLegend = [
-    ['Salário', PDF.c.s1, pMoney(C.R.tot.salario)],
-    ['Vale Transporte', PDF.c.s1, pMoney(C.R.tot.vt)],
-    ['Hora Extra', PDF.c.s1, pMoney(C.R.tot.extra)],
-  ];
+  const revLegend = [['Salário', PDF.c.s1, pMoney(C.R.tot.salario)]]
+    .concat((C.R.tot.beneficios || []).map(b => [b.nome, PDF.c.s1, pMoney(b.valor)]))
+    .concat(C.R.tot.extra > 0 ? [['Hora Extra', PDF.c.s1, pMoney(C.R.tot.extra)]] : [])
+    .slice(0, 6);
   // Legenda em 2 colunas: o painel fica mais baixo e cabe melhor na página.
   const legRows = n => Math.ceil(n / 2);
   const legH = Math.max(legRows(catLegend.length), legRows(revLegend.length)) * 4.6;
@@ -552,7 +598,7 @@ function drawCharts(C, imgs) {
 
 function drawTransactions(C) {
   const R = C.R;
-  sectionTitle(C, 'Lançamentos do Período', `${R.lancamentos.length} registro(s) entre ${C.periodLabel}`);
+  sectionTitle(C, 'Lançamentos do Período', `${R.lancamentos.length} registro(s) entre ${C.periodLabel}`, tblReserve(R.lancamentos.length, 2));
   if (!R.lancamentos.length) {
     font(C.doc, 9, 'normal'); ink(C.doc, PDF.c.t3);
     C.doc.text('Nenhum lançamento no período selecionado.', PDF.M, C.y); C.y += 10; return;
@@ -562,33 +608,26 @@ function drawTransactions(C) {
 
   table(C, [
     { title: 'Data', w: 22, get: t => fmtDate(t.data), color: () => PDF.c.t2 },
-    { title: 'Descrição', w: 54, get: t => t.descricao || KINDS[t.kind]?.label || '-' },
+    { title: 'Descrição', w: 52, get: t => t.descricao || KINDS[t.kind]?.label || '-' },
     { title: 'Tipo', w: 28, get: t => KINDS[t.kind]?.label || t.kind, color: () => PDF.c.t2 },
     { title: 'Categoria', w: 28, get: t => t.categoria || '-', color: () => PDF.c.t2 },
     { title: 'Valor', w: 30, align: 'right', bold: true, get: t => (KINDS[t.kind]?.flow === 'in' ? '+ ' : '- ') + pMoney(Math.abs(num(t.valor))), color: t => KINDS[t.kind]?.flow === 'in' ? PDF.c.ok : PDF.c.danger },
-    { title: 'Status', w: 20, align: 'right', get: t => (t.status === 'pendente' ? 'Pendente' : 'Pago'), color: t => t.status === 'pendente' ? PDF.c.warn : PDF.c.t2 },
+    { title: 'Status', w: 22, align: 'right', get: t => (t.status === 'pendente' ? 'Pendente' : 'Pago'), color: t => t.status === 'pendente' ? PDF.c.warn : PDF.c.t2 },
   ], R.lancamentos, [
-    null, { text: 'Saldo do período' }, null, null,
-    { text: pMoney(totalIn - totalOut), color: totalIn - totalOut < 0 ? PDF.c.danger : PDF.c.ok },
-    null,
+    // Duas linhas de rodapé: entradas/saídas e o saldo. Ficam grudadas na tabela,
+    // então nunca sobra uma linha órfã no topo da página seguinte.
+    [null, { text: 'Entradas e saídas', color: PDF.c.t3 }, null, null,
+     { text: '+ ' + pMoney(totalIn), color: PDF.c.ok },
+     { text: '- ' + pMoney(totalOut), color: PDF.c.danger }],
+    [null, { text: 'Saldo do período' }, null, null,
+     { text: pMoney(totalIn - totalOut), color: totalIn - totalOut < 0 ? PDF.c.danger : PDF.c.ok },
+     null],
   ]);
-
-  // Linha de apoio: entradas e saídas separadas, fora da grade (sempre cabe)
-  ensure(C, 8);
-  font(C.doc, 8, 'normal'); ink(C.doc, PDF.c.t3);
-  C.doc.text('Entradas', PDF.M, C.y);
-  font(C.doc, 8, 'bold'); ink(C.doc, PDF.c.ok);
-  C.doc.text('+ ' + pMoney(totalIn), PDF.M + 22, C.y);
-  font(C.doc, 8, 'normal'); ink(C.doc, PDF.c.t3);
-  C.doc.text('Saídas', PDF.M + 62, C.y);
-  font(C.doc, 8, 'bold'); ink(C.doc, PDF.c.danger);
-  C.doc.text('- ' + pMoney(totalOut), PDF.M + 80, C.y);
-  C.y += 9;
 }
 
 function drawReceivables(C) {
   const R = C.R;
-  sectionTitle(C, 'A Receber do Patrão', 'Pendências e dias de atraso apurados na data de emissão');
+  sectionTitle(C, 'A Receber do Patrão', 'Pendências e dias de atraso apurados na data de emissão', tblReserve(R.receivables.length, 1));
   if (!R.receivables.length) {
     font(C.doc, 9, 'normal'); ink(C.doc, PDF.c.t3);
     C.doc.text('Nenhuma pendência registrada no período.', PDF.M, C.y); C.y += 10; return;
@@ -611,25 +650,41 @@ function drawReceivables(C) {
 
 function drawDetail(C) {
   const R = C.R;
-  sectionTitle(C, 'Detalhamento: Horas Extras, VT e Liberamentos', 'Memória de cálculo mês a mês');
+  sectionTitle(C, 'Detalhamento: Salário, Benefícios e Horas Extras', 'Memória de cálculo mês a mês', tblReserve(R.months.length, 1));
 
   table(C, [
     { title: 'Mês', w: 34, get: m => monthLabelLong(m.key) },
-    { title: 'Salário', w: 26, align: 'right', get: m => pMoney(m.salario), color: () => PDF.c.t2 },
-    { title: 'Semanas VT', w: 24, align: 'right', get: m => String(m.semanasVt), color: () => PDF.c.t2 },
-    { title: 'VT', w: 24, align: 'right', get: m => pMoney(m.vt), color: () => PDF.c.t2 },
+    { title: 'Salário', w: 27, align: 'right', get: m => pMoney(m.salario), color: () => PDF.c.t2 },
+    { title: 'Cobertura', w: 25, align: 'right', get: m => m.cobertura ? `${m.cobertura.dias}/${m.cobertura.totalDias} dias` : '-', color: m => (m.cobertura && m.cobertura.parcial) ? PDF.c.warn : PDF.c.t3 },
+    { title: 'Benefícios', w: 27, align: 'right', get: m => pMoney(m.totalBeneficios), color: () => PDF.c.t2 },
     { title: 'H. Extras', w: 20, align: 'right', get: m => sane(hours(m.horasExtras)), color: () => PDF.c.t2 },
     { title: 'Valor extras', w: 26, align: 'right', get: m => pMoney(m.extra), color: () => PDF.c.ok },
-    { title: 'Descontos', w: 28, align: 'right', get: m => m.descontos ? '- ' + pMoney(m.descontos) : '-', color: m => m.descontos ? PDF.c.danger : PDF.c.t3 },
+    { title: 'Descontos', w: 23, align: 'right', get: m => m.descontos ? '- ' + pMoney(m.descontos) : '-', color: m => m.descontos ? PDF.c.danger : PDF.c.t3 },
   ], R.months, [
     { text: 'Período' },
     { text: pMoney(R.tot.salario) },
-    { text: String(R.tot.semanasVt) },
-    { text: pMoney(R.tot.vt) },
+    null,
+    { text: pMoney(R.tot.totalBeneficios) },
     { text: sane(hours(R.tot.horasExtras)) },
     { text: pMoney(R.tot.extra), color: PDF.c.ok },
     { text: R.tot.descontos ? '- ' + pMoney(R.tot.descontos) : '-', color: R.tot.descontos ? PDF.c.danger : PDF.c.t3 },
   ]);
+
+  // Períodos de salário vigentes no intervalo — a origem dos números acima.
+  const vig = (R.salaries || []).filter(v => (v.inicio || '') <= R.to && (!v.fim || v.fim >= R.from));
+  if (vig.length) {
+    ensure(C, 22);
+    font(C.doc, 9, 'bold'); ink(C.doc, PDF.c.t1);
+    C.doc.text('Períodos de salário considerados', PDF.M, C.y); C.y += 6;
+    table(C, [
+      { title: 'A partir de', w: 26, get: v => fmtDate(v.inicio), color: () => PDF.c.t2 },
+      { title: 'Até', w: 28, get: v => v.fim ? fmtDate(v.fim) : 'Até o momento', color: v => v.fim ? PDF.c.t2 : PDF.c.ok },
+      { title: 'Salário', w: 28, align: 'right', bold: true, get: v => pMoney(v.valor) },
+      { title: 'Benefícios', w: 100, get: v => (v.beneficios || []).length
+          ? v.beneficios.map(b => `${b.nome} ${pMoney(b.valor)}${freqLabel(b.frequencia)}`).join('; ') : '-',
+        color: () => PDF.c.t2 },
+    ], vig);
+  }
 
   // Lançamentos de hora extra e liberamento, um a um
   const detail = Repo.all().filter(t => (t.kind === 'hora_extra' || t.kind === 'liberamento' || t.kind === 'vt')
@@ -641,8 +696,8 @@ function drawDetail(C) {
     table(C, [
       { title: 'Data', w: 24, get: t => fmtDate(t.data), color: () => PDF.c.t2 },
       { title: 'Tipo', w: 34, get: t => KINDS[t.kind]?.label || t.kind },
-      { title: 'Descrição', w: 70, get: t => t.descricao || '-', color: () => PDF.c.t2 },
-      { title: 'Horas', w: 24, align: 'right', get: t => t.horas ? sane(hours(t.horas)) : '-', color: () => PDF.c.t2 },
+      { title: 'Descrição', w: 58, get: t => t.descricao || '-', color: () => PDF.c.t2 },
+      { title: 'Horas', w: 24, align: 'right', get: t => t.horas ? sane(`${hours(t.horas)} x ${money(t.valorHora)}`) : '-', color: () => PDF.c.t2 },
       { title: 'Valor', w: 30, align: 'right', bold: true, get: t => (KINDS[t.kind]?.flow === 'in' ? '+ ' : '- ') + pMoney(Math.abs(num(t.valor))), color: t => KINDS[t.kind]?.flow === 'in' ? PDF.c.ok : PDF.c.danger },
     ], detail);
   }
@@ -664,7 +719,7 @@ async function generatePdf(e) {
 
   const original = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<span style="width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span> Gerando…';
+  btn.innerHTML = '<span style="width:13px;height:13px;border:2px solid color-mix(in srgb, currentColor 30%, transparent);border-top-color:currentColor;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span> Gerando…';
   if (!$('#spinKf')) {
     const s = document.createElement('style'); s.id = 'spinKf';
     s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
@@ -684,7 +739,7 @@ async function generatePdf(e) {
     drawCover(C);
     newPage(C);
 
-    if (opts.kpis) drawKpis(C);
+    if (opts.kpis) { drawKpis(C); drawInsights(C); }
     if (opts.charts) drawCharts(C, await reportCharts(R));
     if (opts.table) drawTransactions(C);
     if (opts.recv) drawReceivables(C);

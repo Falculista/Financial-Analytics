@@ -71,10 +71,19 @@ function baseChartOptions(p) {
 
 function destroyChart(k) { if (charts[k]) { charts[k].destroy(); delete charts[k]; } }
 
-/* ---- 7.1 Evolução mensal (linha) ------------------------------------------------ */
+/* ---- 7.1 Evolução mensal (linha) ------------------------------------------------
+   No modo "ano todo" mostra os 12 meses do ano escolhido; no modo mês, os 12 meses
+   que terminam no mês selecionado — assim sempre há contexto histórico.
+   -------------------------------------------------------------------------------- */
 function renderEvolution() {
   const p = palette();
-  const serie = Calc.series(State.key, 12, Repo.all(), Repo.settings());
+  const serie = State.isYear
+    ? State.keys.map(k => Calc.monthSummary(k, Repo.all(), Repo.salaries()))
+    : Calc.series(State.key, 12, Repo.all(), Repo.salaries());
+  $('#evoSub').textContent = State.isYear
+    ? `Receita, despesa e saldo dos 12 meses de ${State.year}`
+    : 'Receita, despesa e saldo dos últimos 12 meses';
+
   const labels = serie.map(s => monthLabel(s.key));
   const mk = (label, data, color) => ({
     label, data, borderColor: color, backgroundColor: color,
@@ -99,10 +108,10 @@ function renderEvolution() {
     options: o,
   });
 
-  // Legenda em HTML: mostra o valor do mês selecionado ao lado do nome da série.
-  const cur = serie[serie.length - 1];
+  // Legenda em HTML: mostra o total do período ao lado do nome da série.
+  const R = Calc.rangeSummary(State.keys, Repo.all(), Repo.salaries());
   $('#evoLegend').innerHTML = [
-    ['Receita', p.s[0], cur.receita], ['Despesa', p.s[1], cur.despesa], ['Saldo', p.s[2], cur.saldo],
+    ['Receita', p.s[0], R.receita], ['Despesa', p.s[1], R.despesa], ['Saldo', p.s[2], R.saldo],
   ].map(([n, c, v]) => `<span class="legend-item"><span class="legend-swatch" style="background:${c}"></span>${n}
       <span class="legend-val">${money(v)}</span></span>`).join('');
 
@@ -118,7 +127,7 @@ function renderEvolution() {
 /* ---- 7.2 Despesas por categoria (donut) ----------------------------------------- */
 function renderExpenses() {
   const p = palette();
-  const map = Calc.expensesByCategory(State.key, Repo.all());
+  const map = Calc.expensesByCategory(State.keys, Repo.all());
   const entries = [...map.entries()].filter(([, v]) => v > 0);
   const total = entries.reduce((s, [, v]) => s + v, 0);
 
@@ -127,7 +136,9 @@ function renderExpenses() {
   if (!entries.length) {
     canvas.parentElement.style.display = 'none';
     $('#expEmpty').className = '';
-    $('#expEmpty').innerHTML = emptyState('Nenhuma despesa neste mês', 'Lance uma despesa em "Novo Lançamento" para ver a distribuição por categoria.');
+    $('#expEmpty').innerHTML = emptyState('Nenhuma despesa neste período',
+      'Use o botão "Despesa" no topo da página para lançar o primeiro gasto.',
+      { label: 'Adicionar despesa', kind: 'despesa' });
     $('#expLegend').innerHTML = '';
     return;
   }
@@ -174,13 +185,15 @@ function renderExpenses() {
       <span class="legend-val">${money(v)}</span></span>`).join('');
 }
 
-/* ---- 7.3 Receita por categoria (barras horizontais) ----------------------------- */
+/* ---- 7.3 Composição da receita (barras horizontais) ----------------------------- */
 function renderRevenue() {
   const p = palette();
-  const s = Calc.monthSummary(State.key, Repo.all(), Repo.settings());
-  const rows = [
-    ['Salário', s.salario], ['Vale Transporte', s.vt], ['Hora Extra', s.extra],
-  ].concat(s.outras > 0 ? [['Outras receitas', s.outras]] : []);
+  const R = Calc.rangeSummary(State.keys, Repo.all(), Repo.salaries());
+  const rows = [['Salário', R.salario]]
+    .concat(R.beneficios.map(b => [b.nome, b.valor]))
+    .concat(R.extra > 0 ? [['Hora Extra', R.extra]] : [])
+    .concat(R.outras > 0 ? [['Outras receitas', R.outras]] : [])
+    .filter(r => r[1] > 0);
   const total = rows.reduce((a, [, v]) => a + v, 0);
 
   destroyChart('rev');
@@ -188,7 +201,8 @@ function renderRevenue() {
   if (total <= 0) {
     canvas.parentElement.style.display = 'none';
     $('#revEmpty').className = '';
-    $('#revEmpty').innerHTML = emptyState('Sem receita neste mês', 'Configure o salário e o VT em Configurações, ou lance horas extras.');
+    $('#revEmpty').innerHTML = emptyState('Sem receita neste período',
+      'Cadastre seu salário em "Salário e Benefícios" ou lance uma hora extra.');
     return;
   }
   canvas.parentElement.style.display = '';
@@ -226,7 +240,9 @@ function renderStatus() {
   if (total <= 0) {
     canvas.parentElement.style.display = 'none';
     $('#stEmpty').className = '';
-    $('#stEmpty').innerHTML = emptyState('Nada registrado', 'Use "Registrar pendência" para anotar o que o patrão ainda deve.');
+    $('#stEmpty').innerHTML = emptyState('Nada registrado',
+      'Anote aqui o que o patrão ainda deve — o atraso é calculado sozinho.',
+      { label: 'Registrar pendência', kind: 'a_receber' });
     return;
   }
   canvas.parentElement.style.display = '';
@@ -250,18 +266,26 @@ function renderStatus() {
   });
 }
 
-/* ---- 7.5 Horas extras por semana (barras) --------------------------------------- */
+/* ---- 7.5 Horas extras (barras) --------------------------------------------------
+   Mês selecionado → uma barra por semana. Ano todo → uma barra por mês.
+   -------------------------------------------------------------------------------- */
 function renderOvertime() {
   const p = palette();
-  const weeks = Calc.overtimeByWeek(State.key, Repo.all());
-  const total = weeks.reduce((a, b) => a + b, 0);
+  const dados = State.isYear
+    ? Calc.overtimeByMonth(State.keys, Repo.all())
+    : Calc.overtimeByWeek(State.key, Repo.all());
+  $('#otSub').textContent = State.isYear
+    ? `Horas por mês em ${State.year}` : 'Horas por semana do mês selecionado';
+  const total = dados.reduce((a, b) => a + b.horas, 0);
 
   destroyChart('ot');
   const canvas = $('#chOvertime');
   if (total <= 0) {
     canvas.parentElement.style.display = 'none';
     $('#otEmpty').className = '';
-    $('#otEmpty').innerHTML = emptyState('Sem horas extras neste mês', 'Lance uma hora extra para acompanhar a distribuição por semana.');
+    $('#otEmpty').innerHTML = emptyState('Sem horas extras neste período',
+      'Lance uma hora extra para acompanhar a distribuição ao longo do tempo.',
+      { label: 'Adicionar hora extra', kind: 'hora_extra' });
     return;
   }
   canvas.parentElement.style.display = '';
@@ -271,14 +295,12 @@ function renderOvertime() {
   o.interaction = { mode: 'nearest', intersect: true };
   o.layout = { padding: { top: 22 } };
   o.scales.y.ticks.callback = v => v + 'h';
-  o.plugins.tooltip.callbacks = {
-    label: c => ` ${hours(c.parsed.y)} · ${money(c.parsed.y * num(Repo.settings().valorHoraExtra))}`,
-  };
+  o.plugins.tooltip.callbacks = { label: c => ` ${hours(c.parsed.y)}` };
 
   charts.ot = new Chart(canvas, {
     type: 'bar',
-    data: { labels: weeks.map((_, i) => `Semana ${i + 1}`), datasets: [{
-      label: 'Horas', data: weeks,
+    data: { labels: dados.map(d => d.label), datasets: [{
+      label: 'Horas', data: dados.map(d => d.horas),
       backgroundColor: p.s[0], borderRadius: 4, borderSkipped: false,
       barPercentage: .55, categoryPercentage: .8,
     }] },

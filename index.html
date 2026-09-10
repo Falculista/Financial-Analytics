@@ -28,8 +28,8 @@
 
     <div class="flex items-center gap-3 mr-auto">
       <div class="w-10 h-10 rounded-xl grid place-items-center flex-none"
-           style="background:linear-gradient(135deg,var(--accent-1),var(--accent-2) 55%,var(--accent-3));box-shadow:0 8px 22px -10px color-mix(in srgb,var(--accent-1) 80%,transparent)">
-        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+           style="background:var(--surface-2);border:1px solid var(--border)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-1)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 3v18h18"/><path d="m7 15 3.5-4.5 3 2.5L20 6"/>
         </svg>
       </div>
@@ -45,17 +45,17 @@
         <svg id="icoSun" class="hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       </button>
 
-      <button class="btn btn-ghost" id="btnSettings" title="Configurações de salário, VT e hora extra">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6 1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.35.4.65.73.85.3.18.64.27 1 .26H21a2 2 0 1 1 0 4h-.09c-.36 0-.7.09-1 .26-.33.2-.59.5-.73.85Z"/></svg>
-        <span class="hidden lg:inline">Configurações</span>
+      <button class="btn" id="btnSalary" title="Cadastrar salário e benefícios por período">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="3"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
+        <span class="hidden md:inline">Salário e Benefícios</span><span class="md:hidden">Salário</span>
       </button>
 
       <div class="relative">
-        <button class="btn btn-ghost" id="btnExport" title="Exportar / importar dados">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-          <span class="hidden sm:inline">Exportar Dados</span>
+        <button class="btn btn-ghost" id="btnExport" title="Exportar, importar e limpar dados">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+          <span class="hidden lg:inline">Dados</span>
         </button>
-        <div id="menuExport" class="hidden absolute right-0 mt-2 w-60 card p-1.5 z-50">
+        <div id="menuExport" class="hidden absolute right-0 mt-2 w-64 card p-1.5 z-50">
           <button class="w-full text-left px-3 py-2 rounded-lg text-[12.5px] hover:bg-[var(--surface-2)] flex items-center gap-2" data-act="json">
             <span class="w-6 h-6 rounded-md grid place-items-center text-[9px] font-bold" style="background:color-mix(in srgb,var(--accent-1) 18%,transparent);color:var(--accent-1)">{ }</span>
             <span><span class="block font-medium">Exportar JSON</span><span class="block text-[10.5px]" style="color:var(--text-3)">Backup completo (restaurável)</span></span>
@@ -64,24 +64,31 @@
             <span class="w-6 h-6 rounded-md grid place-items-center text-[9px] font-bold" style="background:color-mix(in srgb,var(--s4) 20%,transparent);color:var(--s4)">CSV</span>
             <span><span class="block font-medium">Exportar CSV</span><span class="block text-[10.5px]" style="color:var(--text-3)">Lançamentos do filtro atual</span></span>
           </button>
-          <div class="divider my-1.5"></div>
           <button class="w-full text-left px-3 py-2 rounded-lg text-[12.5px] hover:bg-[var(--surface-2)] flex items-center gap-2" data-act="import">
             <span class="w-6 h-6 rounded-md grid place-items-center" style="background:color-mix(in srgb,var(--accent-2) 18%,transparent);color:var(--accent-2)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/></svg>
             </span>
             <span><span class="block font-medium">Importar JSON</span><span class="block text-[10.5px]" style="color:var(--text-3)">Restaurar um backup</span></span>
           </button>
+          <div class="divider my-1.5"></div>
+          <button class="w-full text-left px-3 py-2 rounded-lg text-[12.5px] hover:bg-[var(--surface-2)] flex items-center gap-2" data-act="demo">
+            <span class="w-6 h-6 rounded-md grid place-items-center" style="background:color-mix(in srgb,var(--s3) 20%,transparent);color:var(--s3)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="4"/></svg>
+            </span>
+            <span><span class="block font-medium">Carregar dados de exemplo</span><span class="block text-[10.5px]" style="color:var(--text-3)">12 meses fictícios, só para ver o layout</span></span>
+          </button>
+          <button class="w-full text-left px-3 py-2 rounded-lg text-[12.5px] hover:bg-[var(--surface-2)] flex items-center gap-2" data-act="wipe" style="color:var(--danger)">
+            <span class="w-6 h-6 rounded-md grid place-items-center" style="background:var(--danger-soft)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+            </span>
+            <span><span class="block font-medium">Apagar todos os dados</span><span class="block text-[10.5px]" style="color:var(--text-3)">Recomeçar do zero</span></span>
+          </button>
         </div>
       </div>
 
-      <button class="btn btn-pink" id="btnPdf">
+      <button class="btn" id="btnPdf">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h4"/></svg>
-        <span class="hidden sm:inline">Gerar Relatório PDF</span><span class="sm:hidden">PDF</span>
-      </button>
-
-      <button class="btn btn-primary" id="btnNew">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        <span class="hidden sm:inline">Novo Lançamento</span><span class="sm:hidden">Novo</span>
+        <span class="hidden sm:inline">Relatório PDF</span><span class="sm:hidden">PDF</span>
       </button>
     </div>
   </div>
@@ -90,15 +97,47 @@
 <main class="mx-auto max-w-[1600px] px-4 sm:px-6 py-5">
 
   <!-- ==============================================================
-       BARRA DE FILTROS — um único filtro para todo o painel
+       AÇÕES + FILTROS
+       Todos os botões de lançar aparecem escritos, sem menu escondido:
+       é a parte que mais se usa no dia a dia.
        ============================================================== -->
-  <section class="card card-pad mb-4">
-    <div class="flex items-end gap-3 flex-wrap">
+  <section class="card mb-4">
+    <div class="card-pad pb-3.5 flex items-center gap-2.5 flex-wrap">
+      <span class="label mr-1" style="letter-spacing:.08em">Adicionar</span>
+      <button class="btn btn-primary" data-add="despesa">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Despesa
+      </button>
+      <button class="btn" data-add="hora_extra">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--s3)"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        Hora extra
+      </button>
+      <button class="btn" data-add="liberamento">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--s2)"><path d="M5 12h14"/><circle cx="12" cy="12" r="9"/></svg>
+        Liberamento
+      </button>
+      <button class="btn" data-add="receita">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--s4)"><path d="M12 2v20"/><path d="M17 7H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Receita extra
+      </button>
+      <button class="btn" data-add="a_receber">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--warn)"><path d="M12 3v9"/><path d="M8 21h8a4 4 0 0 0 4-4v-5"/><path d="M4 12v5a4 4 0 0 0 4 4"/></svg>
+        A receber do patrão
+      </button>
+      <button class="btn btn-ghost" data-add="vt" title="Correção pontual de vale transporte, vale refeição etc.">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="16" height="12" rx="3"/><path d="M4 11h16M7 20v-2M17 20v-2"/></svg>
+        Ajuste de benefício
+      </button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="card-pad pt-3.5 flex items-end gap-3 flex-wrap">
       <div class="hidden sm:flex items-center gap-2 mr-1 mb-1.5">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--text-3)"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
         <span class="label" style="letter-spacing:.08em">Filtros</span>
       </div>
-      <div class="flex-1 basis-[44%] sm:basis-0 min-w-[128px]"><label class="fl" for="fMonth">Mês</label><select id="fMonth" class="field"></select></div>
+      <div class="flex-1 basis-[44%] sm:basis-0 min-w-[150px]"><label class="fl" for="fPeriod">Período</label><select id="fPeriod" class="field"></select></div>
       <div class="flex-1 basis-[44%] min-w-[104px] sm:flex-none sm:basis-auto"><label class="fl" for="fYear">Ano</label><select id="fYear" class="field"></select></div>
       <div class="flex-1 basis-[44%] sm:basis-0 min-w-[150px]"><label class="fl" for="fCat">Categoria</label><select id="fCat" class="field"></select></div>
       <div class="flex-1 basis-[44%] min-w-[132px] sm:flex-none sm:basis-auto"><label class="fl" for="fStatus">Status</label><select id="fStatus" class="field">
@@ -114,33 +153,44 @@
     </div>
   </section>
 
+  <!-- Aviso quando ainda não há salário cadastrado -->
+  <section id="noSalary" class="hidden mb-4">
+    <div class="card card-pad flex items-start gap-3.5 flex-wrap" style="border-color:color-mix(in srgb,var(--accent-1) 34%,transparent)">
+      <span class="w-9 h-9 rounded-lg grid place-items-center flex-none" style="background:color-mix(in srgb,var(--accent-1) 16%,transparent);color:var(--accent-1)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="3"/><path d="M2 10h20"/></svg>
+      </span>
+      <div class="flex-1 min-w-[220px]">
+        <h2 class="chart-title">Comece cadastrando seu salário</h2>
+        <p class="chart-sub">Informe o valor, a data em que passou a receber e os benefícios (VT, VR…). O painel só conta o salário a partir dessa data — nada é somado em meses anteriores.</p>
+      </div>
+      <button class="btn btn-primary" id="btnSalaryCta">Cadastrar salário</button>
+    </div>
+  </section>
+
   <!-- ==============================================================
        KPI CARDS
        ============================================================== -->
   <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3.5 mb-4">
-    <!-- 1. Receita -->
     <article class="card card-pad kpi" style="--kpi-color:var(--s1)">
       <div class="flex items-start gap-3">
         <div class="kpi-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 7H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
         <div class="min-w-0 flex-1">
-          <p class="label">Receita do Mês</p>
+          <p class="label" id="kpiRevenueLabel">Receita do Período</p>
           <p class="kpi-value mt-1.5" id="kpiRevenue">R$ 0,00</p>
           <p class="text-[11.5px] mt-1.5" style="color:var(--text-3)" id="kpiRevenueSub">—</p>
         </div>
       </div>
     </article>
-    <!-- 2. Despesas -->
     <article class="card card-pad kpi" style="--kpi-color:var(--s2)">
       <div class="flex items-start gap-3">
         <div class="kpi-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h20"/><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M6 14h5"/></svg></div>
         <div class="min-w-0 flex-1">
-          <p class="label">Despesas do Mês</p>
+          <p class="label" id="kpiExpenseLabel">Despesas do Período</p>
           <p class="kpi-value mt-1.5" id="kpiExpense">R$ 0,00</p>
           <p class="text-[11.5px] mt-1.5" style="color:var(--text-3)" id="kpiExpenseSub">—</p>
         </div>
       </div>
     </article>
-    <!-- 3. Saldo -->
     <article class="card card-pad kpi" id="kpiBalanceCard" style="--kpi-color:var(--ok)">
       <div class="flex items-start gap-3">
         <div class="kpi-icon" id="kpiBalanceIcon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg></div>
@@ -151,7 +201,6 @@
         </div>
       </div>
     </article>
-    <!-- 4. A receber -->
     <article class="card card-pad kpi" style="--kpi-color:var(--warn)">
       <div class="flex items-start gap-3">
         <div class="kpi-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
@@ -162,7 +211,6 @@
         </div>
       </div>
     </article>
-    <!-- 5. Horas extras -->
     <article class="card card-pad kpi" style="--kpi-color:var(--s3)">
       <div class="flex items-start gap-3">
         <div class="kpi-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7v5l4 2"/><path d="M17 3.5 21 5l-1.5 4"/></svg></div>
@@ -176,6 +224,17 @@
   </section>
 
   <!-- ==============================================================
+       ANÁLISES E INSIGHTS
+       ============================================================== -->
+  <section class="card mb-3.5" id="insightsSection">
+    <div class="card-pad pb-2">
+      <h2 class="chart-title">Análises e Insights</h2>
+      <p class="chart-sub" id="insightsSub">Leituras automáticas do período selecionado</p>
+    </div>
+    <div class="card-pad pt-1"><div id="insightsBody" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3"></div></div>
+  </section>
+
+  <!-- ==============================================================
        GRÁFICOS — linha 1
        ============================================================== -->
   <section class="grid grid-cols-1 xl:grid-cols-3 gap-3.5 mb-3.5">
@@ -183,7 +242,7 @@
       <div class="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 class="chart-title">Evolução Mensal</h2>
-          <p class="chart-sub">Receita, despesa e saldo dos últimos 12 meses</p>
+          <p class="chart-sub" id="evoSub">Receita, despesa e saldo mês a mês</p>
         </div>
         <div class="flex items-center gap-1" id="evoTabs">
           <button class="tab active" data-view="chart">Gráfico</button>
@@ -209,8 +268,8 @@
        ============================================================== -->
   <section class="grid grid-cols-1 lg:grid-cols-3 gap-3.5 mb-3.5">
     <div class="card card-pad">
-      <h2 class="chart-title">Faturamento por Categoria de Receita</h2>
-      <p class="chart-sub">Salário, vale transporte e hora extra</p>
+      <h2 class="chart-title">Composição da Receita</h2>
+      <p class="chart-sub">Salário, benefícios e horas extras</p>
       <div class="chart-box mt-3" style="height:212px"><canvas id="chRevenue"></canvas></div>
       <div id="revEmpty" class="hidden"></div>
     </div>
@@ -224,7 +283,7 @@
 
     <div class="card card-pad">
       <h2 class="chart-title">Histórico de Horas Extras</h2>
-      <p class="chart-sub">Horas por semana do mês selecionado</p>
+      <p class="chart-sub" id="otSub">Horas por semana do mês selecionado</p>
       <div class="chart-box mt-3" style="height:212px"><canvas id="chOvertime"></canvas></div>
       <div id="otEmpty" class="hidden"></div>
     </div>
@@ -237,11 +296,11 @@
     <div class="card-pad flex items-start justify-between gap-3 flex-wrap">
       <div>
         <h2 class="chart-title">A Receber do Patrão</h2>
-        <p class="chart-sub">Horas extras, VT e salário ainda não pagos — atraso calculado automaticamente</p>
+        <p class="chart-sub">Horas extras, benefícios e salário ainda não pagos — atraso calculado automaticamente</p>
       </div>
       <div class="flex items-center gap-2">
         <span class="pill pill-danger" id="lateBadge"><span class="pill-dot" style="background:currentColor"></span><span id="lateBadgeTxt">0 em atraso</span></span>
-        <button class="btn btn-ghost" id="btnNewReceivable">
+        <button class="btn btn-ghost" data-add="a_receber">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           Registrar pendência
         </button>
@@ -260,9 +319,13 @@
         <h2 class="chart-title">Lançamentos</h2>
         <p class="chart-sub"><span id="txCount">0</span> registro(s) no filtro atual</p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 flex-wrap">
         <input id="txSearch" class="field" style="width:190px" placeholder="Buscar descrição…">
         <select id="txPerPage" class="field" style="width:114px"><option value="10">10 / pág</option><option value="25" selected>25 / pág</option><option value="50">50 / pág</option><option value="1000">Todos</option></select>
+        <button class="btn btn-primary" data-add="despesa">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Nova despesa
+        </button>
       </div>
     </div>
     <div class="divider"></div>
@@ -309,13 +372,11 @@
 <div class="overlay" id="ovTx">
   <div class="modal" style="max-width:600px">
     <div class="modal-head">
-      <div><h3 class="text-[15.5px] font-semibold" id="txModalTitle">Novo Lançamento</h3><p class="chart-sub" id="txModalSub">Escolha o tipo e preencha os campos</p></div>
+      <div><h3 class="text-[15.5px] font-semibold" id="txModalTitle">Novo Lançamento</h3><p class="chart-sub" id="txModalSub">Preencha os campos</p></div>
       <button class="btn btn-icon btn-ghost" data-close><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <form id="txForm">
       <div class="modal-body">
-        <label class="fl">Tipo de lançamento</label>
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4" id="kindPicker"></div>
         <div id="txFields" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
       </div>
       <div class="modal-foot">
@@ -327,39 +388,69 @@
   </div>
 </div>
 
-<!-- Configurações -->
-<div class="overlay" id="ovSettings">
-  <div class="modal" style="max-width:560px">
+<!-- Salário e benefícios: lista de períodos -->
+<div class="overlay" id="ovSalary">
+  <div class="modal" style="max-width:720px">
     <div class="modal-head">
-      <div><h3 class="text-[15.5px] font-semibold">Configurações</h3><p class="chart-sub">Parâmetros usados em todos os cálculos</p></div>
+      <div>
+        <h3 class="text-[15.5px] font-semibold">Salário e Benefícios</h3>
+        <p class="chart-sub">Um período por valor. O painel só conta cada salário a partir da data de início.</p>
+      </div>
       <button class="btn btn-icon btn-ghost" data-close><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
-    <form id="settingsForm">
-      <div class="modal-body grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div><label class="fl" for="sSalary">Salário mensal fixo (R$)</label><input id="sSalary" class="field" type="number" step="0.01" min="0" required></div>
-        <div><label class="fl" for="sVt">Vale transporte por semana (R$)</label><input id="sVt" class="field" type="number" step="0.01" min="0" required></div>
-        <div><label class="fl" for="sHour">Valor da hora extra (R$)</label><input id="sHour" class="field" type="number" step="0.01" min="0" required></div>
-        <div><label class="fl" for="sPayday">Dia de pagamento do salário</label><input id="sPayday" class="field" type="number" min="1" max="31" required></div>
-        <div class="sm:col-span-2 divider my-1"></div>
-        <div class="sm:col-span-2">
-          <label class="fl" for="sWeeks">Semanas de VT no mês selecionado (<span id="sWeeksMonth">—</span>)</label>
-          <input id="sWeeks" class="field" type="number" min="0" max="6" step="1">
-          <p class="text-[11px] mt-1.5" style="color:var(--text-3)">Deixe em branco para o sistema calcular automaticamente pelo calendário (<span id="sWeeksAuto">—</span> semanas). Preencha só quando o seu mês tiver um número diferente.</p>
+    <div class="modal-body">
+      <div id="salaryList"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-close>Fechar</button>
+      <button type="button" class="btn btn-primary" id="btnNewSalary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Novo período
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Salário e benefícios: formulário de um período -->
+<div class="overlay" id="ovSalaryForm">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <div><h3 class="text-[15.5px] font-semibold" id="salaryFormTitle">Novo período de salário</h3><p class="chart-sub">Vale a partir da data de início — meses anteriores não recebem este valor.</p></div>
+      <button class="btn btn-icon btn-ghost" data-close><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <form id="salaryForm">
+      <div class="modal-body">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div><label class="fl" for="salValor">Salário mensal (R$)</label><input id="salValor" class="field" type="number" step="0.01" min="0" required placeholder="Ex.: 2000"></div>
+          <div><label class="fl" for="salInicio">A partir de</label><input id="salInicio" class="field" type="date" required></div>
+          <div><label class="fl" for="salFim">Até</label><input id="salFim" class="field" type="date"></div>
         </div>
-        <div class="sm:col-span-2">
-          <label class="fl" for="sSalaryOverride">Salário só neste mês (R$)</label>
-          <input id="sSalaryOverride" class="field" type="number" step="0.01" min="0">
-          <p class="text-[11px] mt-1.5" style="color:var(--text-3)">Deixe em branco para usar o salário fixo. Útil quando houve reajuste ou desconto no mês.</p>
+        <label class="chk mt-2.5" style="width:fit-content">
+          <input type="checkbox" id="salAtual" checked>
+          <span><span class="chk-t">Recebo este valor até o momento</span><span class="chk-d">Deixe marcado enquanto este for o salário atual — o campo "Até" fica em branco</span></span>
+        </label>
+
+        <div class="divider my-4"></div>
+
+        <div class="flex items-center justify-between gap-3 mb-2.5 flex-wrap">
+          <div>
+            <p class="text-[13px] font-semibold">Benefícios deste período</p>
+            <p class="chart-sub">Valores que entram junto do salário — VT, VR, VA, adicionais…</p>
+          </div>
+          <button type="button" class="btn btn-ghost" id="btnAddBenefit">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Adicionar benefício
+          </button>
         </div>
-        <div class="sm:col-span-2 divider my-1"></div>
-        <div class="sm:col-span-2 flex flex-wrap gap-2">
-          <button type="button" class="btn btn-ghost" id="btnDemo">Carregar dados de exemplo</button>
-          <button type="button" class="btn btn-ghost" id="btnWipe" style="color:var(--danger)">Apagar todos os dados</button>
-        </div>
+        <div id="benefitList" class="flex flex-col gap-2"></div>
+
+        <div class="mt-3.5"><label class="fl" for="salObs">Observação (opcional)</label><input id="salObs" class="field" type="text" placeholder="Ex.: promoção para operador II"></div>
+        <p id="salWarn" class="hidden mt-3 text-[11.5px] rounded-xl px-3 py-2.5" style="background:var(--warn-soft);color:var(--warn)"></p>
       </div>
       <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" id="salDelete" style="margin-right:auto;color:var(--danger)">Excluir período</button>
         <button type="button" class="btn btn-ghost" data-close>Cancelar</button>
-        <button type="submit" class="btn btn-primary">Salvar configurações</button>
+        <button type="submit" class="btn btn-primary">Salvar período</button>
       </div>
     </form>
   </div>
@@ -393,7 +484,7 @@
           <label class="chk"><input type="checkbox" id="pdfCharts" checked><span><span class="chk-t">Gráficos</span><span class="chk-d">Evolução, despesas, receitas e status</span></span></label>
           <label class="chk"><input type="checkbox" id="pdfTable" checked><span><span class="chk-t">Tabela de lançamentos</span><span class="chk-d">Com zebra striping e totais</span></span></label>
           <label class="chk"><input type="checkbox" id="pdfRecv" checked><span><span class="chk-t">A Receber do Patrão</span><span class="chk-d">Pendências e dias de atraso</span></span></label>
-          <label class="chk sm:col-span-2"><input type="checkbox" id="pdfDetail" checked><span><span class="chk-t">Detalhamento de Horas Extras, VT e Liberamentos</span><span class="chk-d">Memória de cálculo linha a linha</span></span></label>
+          <label class="chk sm:col-span-2"><input type="checkbox" id="pdfDetail" checked><span><span class="chk-t">Detalhamento de salário, benefícios e horas extras</span><span class="chk-d">Memória de cálculo mês a mês</span></span></label>
         </div>
 
         <div class="grid grid-cols-1 gap-3">
@@ -403,7 +494,7 @@
       </div>
       <div class="modal-foot">
         <button type="button" class="btn btn-ghost" data-close>Cancelar</button>
-        <button type="submit" class="btn btn-pink" id="pdfSubmit">
+        <button type="submit" class="btn btn-primary" id="pdfSubmit">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
           Gerar PDF
         </button>

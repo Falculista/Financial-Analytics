@@ -32,11 +32,19 @@ function toast(msg, kind = 'ok') {
   setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .25s'; setTimeout(() => el.remove(), 260); }, 3200);
 }
 
-function emptyState(title, desc) {
+/**
+ * Estado vazio. O terceiro argumento vira um botão que já abre o formulário certo —
+ * é o que evita o usuário ficar procurando onde se lança uma despesa.
+ */
+function emptyState(title, desc, cta) {
+  const botao = cta
+    ? `<button class="btn btn-primary mt-1.5" data-add="${cta.kind}">
+         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+         ${esc(cta.label)}</button>` : '';
   return `<div class="empty">
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18M8 15h3"/></svg>
-    <span class="empty-t">${esc(title)}</span><span class="empty-d">${esc(desc)}</span></div>`;
+    <span class="empty-t">${esc(title)}</span><span class="empty-d">${esc(desc)}</span>${botao}</div>`;
 }
 
 
